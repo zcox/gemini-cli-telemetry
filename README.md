@@ -40,7 +40,7 @@ In another terminal, run something like this, to have GC run a simple prompt:
 gemini -p "write a haiku about your favorite animal"
 ```
 
-In the first terminal, you'll see output similar to this (edited for brevity):
+In the first terminal, you'll see output similar to this:
 
 ```
 {"event_name":"gemini_cli.user_prompt","prompt":"write a haiku about your favorite animal"}
@@ -63,7 +63,7 @@ Followed by various initial context, and then a hard-coded model response:
 
 You don't see this when using GC, but it's interesting to know how GC is providing some initial context behind the scenes.
 
-Next, after that initial Gemini request/response, there is another Gemini request/response. The request has all of the messages so far in the session, followed by a synthetic user message, that we did not type ourselves:
+Next, after that initial Gemini request/response to write the haiku, there is another Gemini request/response. The request has all of the messages so far in the session (initial context, instruction to write the haiku, and the generated haiku), followed by this synthetic user message, that we did not type ourselves:
 
 > Analyze *only* the content and structure of your immediately preceding response (your last turn in the conversation history). Based *strictly* on that response, determine who should logically speak next: the 'user' or the 'model' (you).\n**Decision Rules (apply in order):**\n1.  **Model Continues:** If your last response explicitly states an immediate next action *you* intend to take (e.g., \"Next, I will...\", \"Now I'll process...\", \"Moving on to analyze...\", indicates an intended tool call that didn't execute), OR if the response seems clearly incomplete (cut off mid-thought without a natural conclusion), then the **'model'** should speak next.\n2.  **Question to User:** If your last response ends with a direct question specifically addressed *to the user*, then the **'user'** should speak next.\n3.  **Waiting for User:** If your last response completed a thought, statement, or task *and* does not meet the criteria for Rule 1 (Model Continues) or Rule 2 (Question to User), it implies a pause expecting user input or reaction. In this case, the **'user'** should speak next.
 
@@ -78,11 +78,11 @@ The response to that "next speaker" prompt is a structured json output:
 }
 ```
 
-This is a classic chain-of-thought output, but notice that it's backwards: the `reasoning` should be generated first, so those output tokens guide the model to generate the actual `next_speaker` result. This prompt probably needs to use [`propertyOrdering`](https://x.com/zcox/status/1912919709642883201).
+This is a classic chain-of-thought (CoT) output, but notice that it's backwards: the `reasoning` should be generated first, so those output tokens guide the model to generate the actual `next_speaker` result. This prompt probably needs to use [`propertyOrdering`](https://x.com/zcox/status/1912919709642883201).
 
 Also notice that the "next speaker" request specifies `"model":"gemini-2.5-flash"` but the response contains `"model":"gemini-2.5-pro"`. I suspect there's a bug in GC's logging. It makes sense to use `flash` for a simple classification like this; it's probably not using `pro`.
 
-Another observation is that while the api response logs seem to include the _entire_ Gemini http response payload (it contains `headers`, the full `candidates` with `avgLogprobs`, and `usageMetadata`), but api request logs only contain the user and model messages. Other important information like temperature, function declarations, and structured output response schema are missing. This appears to be an asymmetry in GC's logging, where only a small part of the Gemini api request is logged.
+Another observation is that while the api response logs seem to include the _entire_ Gemini http response payload (it contains `headers`, the full `candidates` with `avgLogprobs`, and `usageMetadata`), the api request logs only contain the user and model messages. Other important request information like temperature, function declarations, and structured output response schema are missing. This appears to be an asymmetry in GC's logging, where only a small part of the Gemini api request is logged.
 
 One solution to this would be looking at GC's traces, instead of logs. GC appears to instrument its node http client, which _should_ expose all details of every http request and response it makes, but either it's not actually creating spans, or is not able to export them correctly. I have only ever observed logs from GC, but never any traces.
 
