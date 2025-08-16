@@ -2,6 +2,10 @@
 
 GC collects [telemetry](https://github.com/google-gemini/gemini-cli/blob/main/docs/telemetry.md) (logs, metrics, and traces) and can export that telemetry.
 
+## Sophisticated OTLP Export
+
+The approaches in the GC telemetry docs currently don't work well. I hope to change this in future work.
+
 ## Local File Export
 
 To configure GC to export telemetry to a local file, use `.gemini/settings.json` like the following:
